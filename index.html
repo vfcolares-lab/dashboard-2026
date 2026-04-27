@@ -1,0 +1,2047 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 RADAR ELEITORAL AM 2026 — Inteligência Estratégica</title>
+
+    <!-- CDN: Chart.js, Leaflet, Turf -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.1/dist/MarkerCluster.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6"></script>
+
+    <style>
+        :root {
+            /* Background */
+            --bg-primary: #0F1419;
+            --bg-secondary: #1A1F2E;
+            --bg-card: #1E2538;
+            --bg-hover: #252D40;
+
+            /* Texto */
+            --text-primary: #E8ECF1;
+            --text-secondary: #8B95A5;
+            --text-muted: #5A6474;
+
+            /* Eixos E1-E6 */
+            --e1: #E74C3C;    /* Vermelho PT */
+            --e2: #FF6B6B;    /* Vermelho claro */
+            --e3: #F39C12;    /* Amarelo */
+            --e4: #F1C40F;    /* Amarelo claro */
+            --e5: #2E86C1;    /* Azul */
+            --e6: #5DADE2;    /* Azul claro */
+
+            /* Classificação EB */
+            --bastiao-eb: #27AE60;
+            --tendencia-eb: #82E0AA;
+            --swing: #F4D03F;
+            --tendencia-anti: #E59866;
+            --bastiao-anti: #E74C3C;
+
+            /* Acentos */
+            --accent-gold: #D4A843;
+            --accent-red: #C41E3A;
+            --accent-blue: #1B4F72;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* ============= LAYOUT ============= */
+        .app-container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background: var(--bg-secondary);
+            border-right: 1px solid #2A3144;
+            overflow-y: auto;
+            padding: 2rem 0;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #2A3144;
+            margin-bottom: 1rem;
+        }
+
+        .sidebar-title {
+            font-size: 1.3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-red), var(--accent-gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.25rem;
+        }
+
+        .sidebar-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .nav-section {
+            padding: 1.5rem 1rem;
+            border-bottom: 1px solid #2A3144;
+        }
+
+        .nav-section-title {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            padding-left: 1rem;
+            letter-spacing: 1px;
+        }
+
+        .nav-btn {
+            display: block;
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            text-align: left;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .nav-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .nav-btn.active {
+            background: var(--bg-card);
+            color: var(--accent-red);
+            border-left: 3px solid var(--accent-red);
+            padding-left: calc(1rem - 3px);
+        }
+
+        /* ============= TOOLTIPS ============= */
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+
+        .tooltip-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            font-size: 0.7rem;
+            margin-left: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .tooltip-container:hover .tooltip-icon {
+            background: rgba(212, 168, 67, 0.3);
+            color: var(--accent-gold);
+        }
+
+        .tooltip-text {
+            visibility: hidden;
+            width: 280px;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            text-align: left;
+            padding: 1rem;
+            border-radius: 6px;
+            position: absolute;
+            z-index: 100;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -140px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            border: 1px solid #2A3144;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #2A3144 transparent transparent transparent;
+        }
+
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .kpi-card {
+            position: relative;
+        }
+
+        .methodology-section {
+            background: var(--bg-card);
+            border: 1px solid #2A3144;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .methodology-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--accent-gold);
+        }
+
+        .index-explanation {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+
+        .index-box {
+            background: var(--bg-primary);
+            border: 1px solid #2A3144;
+            border-radius: 6px;
+            padding: 1.25rem;
+        }
+
+        .index-box h4 {
+            color: var(--accent-gold);
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .index-box p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            line-height: 1.6;
+            margin-bottom: 0.75rem;
+        }
+
+        .index-formula {
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid var(--accent-gold);
+            padding: 0.75rem;
+            margin: 0.75rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            overflow-x: auto;
+        }
+
+        /* Main content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .app-header {
+            background: var(--bg-card);
+            border-bottom: 1px solid #2A3144;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+        }
+
+        .header-badge {
+            background: var(--accent-red);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        /* Content area */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* ============= CARDS ============= */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid #2A3144;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .kpi-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .kpi-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .kpi-card.bastiao-lulista .kpi-number { color: var(--e1); }
+        .kpi-card.tendencia-lulista .kpi-number { color: #FF6B6B; }
+        .kpi-card.seguro-eb .kpi-number { color: var(--bastiao-eb); }
+        .kpi-card.dificil .kpi-number { color: #E74C3C; }
+
+        /* ============= TABELAS ============= */
+        .table-wrapper {
+            background: var(--bg-card);
+            border: 1px solid #2A3144;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: var(--bg-hover);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 700;
+            font-size: 0.85rem;
+            border-bottom: 1px solid #2A3144;
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #2A3144;
+        }
+
+        tr:hover {
+            background: var(--bg-hover);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-bastiao-lulista { background: var(--e1); color: white; }
+        .badge-bastiao-bolsonarista { background: var(--e5); color: white; }
+        .badge-bastiao-eb { background: var(--bastiao-eb); color: white; }
+        .badge-swing { background: var(--swing); color: #000; }
+        .badge-e1 { background: var(--e1); color: white; }
+        .badge-e5 { background: var(--e5); color: white; }
+
+        /* ============= CHARTS ============= */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-container {
+            background: var(--bg-card);
+            border: 1px solid #2A3144;
+            border-radius: 8px;
+            padding: 1.5rem;
+            position: relative;
+            height: 400px;
+        }
+
+        /* Maps */
+        #map {
+            height: 600px;
+            border-radius: 8px;
+            border: 1px solid #2A3144;
+            margin-bottom: 2rem;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #3A4455;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4A5465;
+        }
+
+        /* Responsivo */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                max-height: 100px;
+                overflow-x: auto;
+                overflow-y: hidden;
+                display: flex;
+                padding: 0;
+            }
+
+            .app-container {
+                flex-direction: column;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-section {
+                display: inline-block;
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">🎯 RADAR</div>
+                <div class="sidebar-subtitle">Amazonas 2026</div>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Principal</div>
+                <button class="nav-btn active" onclick="switchSection('overview')">📊 Overview</button>
+                <button class="nav-btn" onclick="switchSection('historico')">🏛️ Municípios</button>
+                <button class="nav-btn" onclick="switchSection('classificacao')">🏛️ Classificação</button>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Estratégia</div>
+                <button class="nav-btn" onclick="switchSection('preditivo')">🎯 Preditivo 2026</button>
+                <button class="nav-btn" onclick="switchSection('impulsionamento')">📍 Impulsionamento</button>
+                <button class="nav-btn" onclick="switchSection('dados')">📋 Dados Brutos</button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+            <!-- HEADER -->
+            <header class="app-header">
+                <div>
+                    <h1 class="header-title">🎯 RADAR ELEITORAL AM 2026</h1>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;" id="headerSubtitle">Inteligência Estratégica — Carregando...</p>
+                </div>
+                <div class="header-badge">⚠️ CONFIDENCIAL</div>
+            </header>
+
+            <!-- CONTENT -->
+            <div class="content-area">
+                <!-- 1. OVERVIEW -->
+                <section id="overview" class="section active">
+                    <h2 style="margin-bottom: 1.5rem;">📊 Overview — Situação Estadual</h2>
+
+                    <!-- KPIs -->
+                    <div class="kpi-grid" id="kpiGrid">
+                        <!-- Preenchido dinamicamente pelo JS -->
+                    </div>
+
+                    <!-- METODOLOGIA -->
+                    <div class="methodology-section">
+                        <div class="methodology-title">📚 Como Classificamos os Municípios</div>
+
+                        <div class="index-explanation">
+                            <!-- ÍNDICE NACIONAL -->
+                            <div class="index-box">
+                                <h4>📊 Índice Nacional (IN)</h4>
+                                <p><strong>Mede:</strong> Força do PT/Lula vs Direita/Bolsonaro em cada município (escala -1 a +1)</p>
+
+                                <div class="index-formula">
+margem_ano = (% votos PT - % votos Direita) / 100<br><br>
+IN = (margem_2010 × 0.10) +<br>
+     (margem_2014 × 0.15) +<br>
+     (margem_2018 × 0.30) +<br>
+     (margem_2022 × 0.45)
+                                </div>
+
+                                <p><strong>Interpretação:</strong></p>
+                                <ul style="margin-left: 1rem; color: var(--text-secondary); font-size: 0.8rem;">
+                                    <li><span style="color: #E74C3C;">▪ IN &gt; +0.20</span> = Bastião Lulista (PT muito forte)</li>
+                                    <li><span style="color: #F39C12;">▪ IN +0.05 a +0.20</span> = Tendência Lulista (PT favorável)</li>
+                                    <li><span style="color: #F4D03F;">▪ IN -0.05 a +0.05</span> = Swing (Disputa aberta)</li>
+                                    <li><span style="color: #2E86C1;">▪ IN &lt; -0.05</span> = Tendência Bolsonarista (Direita favorável)</li>
+                                </ul>
+                                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
+                                    <em>Nota: Amazonas não tem municípios em "Bastião Bolsonarista". Dividido entre Lulista (6), Tendência Lulista (38) e Swing (17).</em>
+                                </p>
+                            </div>
+
+                            <!-- ÍNDICE EB -->
+                            <div class="index-box">
+                                <h4>🎯 Índice Eduardo Braga (IEB)</h4>
+                                <p><strong>Mede:</strong> Quanto EB supera (ou não) a média estadual em cada município (escala -1 a +1)</p>
+
+                                <div class="index-formula">
+perf_ano = (% votos EB município - % votos EB estado) / 100<br><br>
+IEB = (perf_2010 × 0.10) +<br>
+      (perf_2014 × 0.15) +<br>
+      (perf_2018 × 0.30) +<br>
+      (perf_2022 × 0.45)
+                                </div>
+
+                                <p><strong>Onde:</strong> Compara desempenho local de EB com a média estadual</p>
+
+                                <p style="margin-top: 0.75rem;"><strong>Interpretação:</strong></p>
+                                <ul style="margin-left: 1rem; color: var(--text-secondary); font-size: 0.8rem;">
+                                    <li><span style="color: #27AE60;">▪ IEB &gt; +0.10</span> = Bastião Eduardista (EB supera estado)</li>
+                                    <li><span style="color: #82E0AA;">▪ IEB +0.03 a +0.10</span> = Tendência Eduardista</li>
+                                    <li><span style="color: #F4D03F;">▪ IEB -0.05 a +0.03</span> = Swing EB (EB ≈ média estadual)</li>
+                                    <li><span style="color: #E74C3C;">▪ IEB &lt; -0.05</span> = Tendência Anti-EB (EB abaixo do estado)</li>
+                                </ul>
+                                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
+                                    <em>Nota: EB tem desempenho muito próximo à média estadual em 2010-2022. Todos os 62 municípios estão no Swing EB.</em>
+                                </p>
+                            </div>
+                        </div>
+
+                        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 1.5rem; border-top: 1px solid #2A3144; padding-top: 1rem;">
+                            <strong>⚠️ Nota importante:</strong> Pesos maiores para eleições recentes porque refletem melhor a situação atual. 2022 tem peso de 45% no cálculo final.
+                        </p>
+                    </div>
+
+                    <!-- MODELO PREDITIVO -->
+                    <div class="methodology-section">
+                        <div class="methodology-title">🔮 Modelo Preditivo 2026 — Cenários de Campanha</div>
+
+                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                            <strong>Método:</strong> Classificação por percentis do Índice EB (ranking dos 62 municípios).
+                            Divide municípios em 5 quintis para identificar onde EB tem melhor chance de vencer em 2026.
+                        </p>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                            <div style="background: var(--bg-primary); border: 2px solid #27AE60; border-radius: 6px; padding: 1rem;">
+                                <div style="font-weight: 700; color: #27AE60; margin-bottom: 0.5rem;">🟢 SEGURO EB — 14 municípios (Top 23%)</div>
+                                <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;">
+                                    Melhor correlação de EB com Lula e desempenho histórico positivo. <strong>Tendência favorável.</strong> <br><br>
+                                    <strong>Ação:</strong> Consolidar votação, manter mobilização, ampliar margem.
+                                </p>
+                            </div>
+
+                            <div style="background: var(--bg-primary); border: 2px solid #F39C12; border-radius: 6px; padding: 1rem;">
+                                <div style="font-weight: 700; color: #F39C12; margin-bottom: 0.5rem;">🟡 COMPETITIVO PRÓ-EB — 12 municípios</div>
+                                <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;">
+                                    EB com <strong>boas chances</strong>. Desempenho positivo em 2022, mas com alguma volatilidade. <br><br>
+                                    <strong>Ação:</strong> Campanha ativa, não relaxar, acompanhar tendências locais.
+                                </p>
+                            </div>
+
+                            <div style="background: var(--bg-primary); border: 2px solid #E67E22; border-radius: 6px; padding: 1rem;">
+                                <div style="font-weight: 700; color: #E67E22; margin-bottom: 0.5rem;">🔴 BATTLEGROUND — 12 municípios</div>
+                                <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;">
+                                    <strong>Disputa aberta</strong> — Desempenho próximo ao neutro. Qualquer um pode vencer. <br><br>
+                                    <strong>Ação:</strong> ⚡ MÁXIMA PRIORIDADE. Investir recursos, cobertura total, mobilização máxima.
+                                </p>
+                            </div>
+
+                            <div style="background: var(--bg-primary); border: 2px solid #E74C3C; border-radius: 6px; padding: 1rem;">
+                                <div style="font-weight: 700; color: #E74C3C; margin-bottom: 0.5rem;">🔴 COMPETITIVO CONTRA — 12 municípios</div>
+                                <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;">
+                                    Candidato <strong>rival tem vantagem</strong>. EB abaixo da média estadual. Precisa de esforço especial. <br><br>
+                                    <strong>Ação:</strong> Focar em votação móvel, atração de apoios estratégicos.
+                                </p>
+                            </div>
+
+                            <div style="background: var(--bg-primary); border: 2px solid #95A5A6; border-radius: 6px; padding: 1rem;">
+                                <div style="font-weight: 700; color: #95A5A6; margin-bottom: 0.5rem;">⚫ DIFÍCIL — 12 municípios (Bottom 19%)</div>
+                                <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;">
+                                    Chances <strong>reduzidas</strong> para EB. Ranking baixo, tendência negativa ou fraca. <br><br>
+                                    <strong>Ação:</strong> Análise detalhada, possível realocação de recursos.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mapa -->
+                    <h3 style="margin: 2rem 0 1rem;">🗺️ Distribuição por Eixo Estratégico</h3>
+                    <div id="map"></div>
+
+                    <!-- Scatter -->
+                    <h3 style="margin: 2rem 0 1rem;">📍 Posicionamento: Índice Nacional × Índice EB</h3>
+                    <div class="chart-container">
+                        <canvas id="scatterChart" width="800" height="400"></canvas>
+                    </div>
+
+                    <!-- Ranking -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
+                        <div>
+                            <h3 style="margin-bottom: 1rem;">🟢 Top 10 Favoráveis</h3>
+                            <div class="table-wrapper">
+                                <table id="topFavoraveis">
+                                    <thead>
+                                        <tr><th>Município</th><th>Índice EB</th></tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 style="margin-bottom: 1rem;">🔴 Top 10 Difíceis</h3>
+                            <div class="table-wrapper">
+                                <table id="topDificeis">
+                                    <thead>
+                                        <tr><th>Município</th><th>Índice EB</th></tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. HISTÓRICO -->
+                <section id="historico" class="section">
+                    <h2 style="margin-bottom: 1.5rem;">🏛️ Municípios - Histórico Eleitoral (2010-2022) + Prognóstico 2026</h2>
+
+                    <!-- SELETOR DE MUNICÍPIO -->
+                    <div style="margin-bottom: 2rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Selecionar município:</label>
+                        <select id="municipioSelect" style="padding: 0.75rem; width: 300px; background: var(--bg-card); color: var(--text-primary); border: 1px solid #2A3144; border-radius: 4px; font-weight: 600;">
+                            <option value="">-- Escolha um município --</option>
+                        </select>
+                    </div>
+
+                    <!-- CARD COM INFORMAÇÕES DO MUNICÍPIO -->
+                    <div id="municipioInfo" style="display: none; background: var(--bg-card); border: 1px solid #2A3144; border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+                            <div>
+                                <div style="color: var(--text-secondary); font-size: 0.85rem; text-transform: uppercase; margin-bottom: 0.5rem;">Eixo Estratégico</div>
+                                <div style="font-size: 1.3rem; font-weight: 700;" id="municEixo">—</div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);" id="municEixoLabel">—</div>
+                            </div>
+                            <div>
+                                <div style="color: var(--text-secondary); font-size: 0.85rem; text-transform: uppercase; margin-bottom: 0.5rem;">Classificação Nacional</div>
+                                <div style="font-size: 1.1rem; font-weight: 700;" id="municClassNac">—</div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);" id="municIndiceNac">—</div>
+                            </div>
+                            <div>
+                                <div style="color: var(--text-secondary); font-size: 0.85rem; text-transform: uppercase; margin-bottom: 0.5rem;">Classificação EB</div>
+                                <div style="font-size: 1.1rem; font-weight: 700;" id="municClassEB">—</div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);" id="municIndiceEB">—</div>
+                            </div>
+                            <div>
+                                <div style="color: var(--text-secondary); font-size: 0.85rem; text-transform: uppercase; margin-bottom: 0.5rem;">Prognóstico 2026</div>
+                                <div style="font-size: 1.1rem; font-weight: 700;" id="municPred26">—</div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);" id="municPredScore">—</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TABELAS EVOLUTIVAS -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                        <!-- TABELA PT × DIREITA -->
+                        <div class="table-wrapper">
+                            <h4 style="margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 2px solid #2A3144;">🇧🇷 Evolução: PT × Direita/Bolsonaro</h4>
+                            <table id="tabelaPresidencial" style="font-size: 0.85rem;">
+                                <thead>
+                                    <tr>
+                                        <th>Ano</th>
+                                        <th>PT %</th>
+                                        <th>Direita %</th>
+                                        <th>3ª Via %</th>
+                                        <th>Saldo</th>
+                                        <th>Variação</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+
+                        <!-- TABELA EDUARDO BRAGA -->
+                        <div class="table-wrapper">
+                            <h4 style="margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 2px solid #2A3144;">🎯 Evolução: Eduardo Braga</h4>
+                            <table id="tabelaEB" style="font-size: 0.85rem;">
+                                <thead>
+                                    <tr>
+                                        <th>Ano</th>
+                                        <th>EB %</th>
+                                        <th>Adv %</th>
+                                        <th>Estado %</th>
+                                        <th>Saldo</th>
+                                        <th>Cargo</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- GRÁFICOS -->
+                    <div class="charts-grid">
+                        <div class="chart-container">
+                            <canvas id="historicaPresChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="historicaEBChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. CLASSIFICAÇÃO -->
+                <section id="classificacao" class="section">
+                    <h2 style="margin-bottom: 1.5rem;">🏛️ Classificação Municipal (E1-E6)</h2>
+
+                    <div class="table-wrapper" style="max-height: 600px; overflow-y: auto;">
+                        <table id="municipiosTable">
+                            <thead>
+                                <tr>
+                                    <th>Município</th>
+                                    <th>Índice Nacional</th>
+                                    <th>Classificação</th>
+                                    <th>Índice EB</th>
+                                    <th>EB</th>
+                                    <th>Eixo</th>
+                                    <th>Prognóstico 2026</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 4. PREDITIVO -->
+                <section id="preditivo" class="section">
+                    <h2 style="margin-bottom: 1.5rem;">🎯 Modelo Preditivo 2026</h2>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div class="chart-container">
+                            <canvas id="preditivoChart"></canvas>
+                        </div>
+                        <div class="chart-container" style="background: var(--bg-card); border: 1px solid #2A3144; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; justify-content: space-around; gap: 1rem;">
+                            <div>
+                                <h4 style="color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.3rem;">Municípios Competitivos</h4>
+                                <div style="font-size: 2rem; font-weight: 800; color: #F39C12;" id="municipiosCompetitivos">—</div>
+                                <small style="color: var(--text-secondary); font-size: 0.75rem;">BATTLEGROUND + Competitivos</small>
+                            </div>
+
+                            <div style="border-top: 1px solid #2A3144; padding-top: 0.8rem;">
+                                <h4 style="color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.3rem;">Tendência Geral</h4>
+                                <div style="font-size: 2rem; font-weight: 800;" id="tendenciaGeral">—</div>
+                                <small style="color: var(--text-secondary); font-size: 0.75rem;" id="tendenciaLabel">—</small>
+                            </div>
+
+                            <div style="border-top: 1px solid #2A3144; padding-top: 0.8rem;">
+                                <h4 style="color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.3rem;">Margem Esperada 2026</h4>
+                                <div style="font-size: 2rem; font-weight: 800;" id="margemEsperada">—</div>
+                                <small style="color: var(--text-secondary); font-size: 0.75rem;">PT vs Bolsonaro</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin: 2rem 0 1rem;">Prioridades por Impacto</h3>
+                    <div class="table-wrapper" style="max-height: 400px; overflow-y: auto;">
+                        <table id="prioridades">
+                            <thead>
+                                <tr>
+                                    <th>Município</th>
+                                    <th>Score Preditivo</th>
+                                    <th>Prognóstico</th>
+                                    <th>Tendência</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 5. IMPULSIONAMENTO -->
+                <section id="impulsionamento" class="section">
+                    <h2 style="margin-bottom: 1rem;">📍 Mapa de Impulsionamento (Seções)</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Geolocalização de seções eleitorais para Meta Ads</p>
+
+                    <!-- SELETOR DE MUNICÍPIO -->
+                    <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: center;">
+                        <div style="flex: 1;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Selecionar município:</label>
+                            <select id="municipioImpulsionamentoSelect" style="padding: 0.75rem; width: 100%; max-width: 400px; background: var(--bg-card); color: var(--text-primary); border: 1px solid #2A3144; border-radius: 4px; font-weight: 600;">
+                                <option value="">-- Todos os municípios --</option>
+                            </select>
+                        </div>
+                        <div style="padding-top: 1.5rem;">
+                            <button id="downloadSecoesCsv" style="padding: 0.75rem 1.5rem; background: #27AE60; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='#229954'" onmouseout="this.style.background='#27AE60';">
+                                ⬇️ Baixar CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- MAPA -->
+                    <div id="map-secoes" style="height: 600px; border-radius: 8px; border: 1px solid #2A3144; margin-bottom: 2rem;"></div>
+
+                    <div style="background: var(--bg-card); border: 1px solid #2A3144; border-radius: 8px; padding: 1.5rem;">
+                        <h3 style="margin-bottom: 1rem;">📋 Legenda de Conteúdo</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                            <div><span class="badge badge-bastiao-eb">LULA+EB</span><br><small style="color: var(--text-secondary);">Fotos com Lula, obras federais</small></div>
+                            <div><span class="badge" style="background: #3498DB; color: white;">EB_PURO</span><br><small style="color: var(--text-secondary);">Entregas regionais, BR-319</small></div>
+                            <div><span class="badge" style="background: #8E44AD; color: white;">BOLSO+EB</span><br><small style="color: var(--text-secondary);">Independência de EB</small></div>
+                            <div><span class="badge badge-swing">PURO_SWING</span><br><small style="color: var(--text-secondary);">Mix de conteúdo, máx. prioridade</small></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. DADOS BRUTOS -->
+                <section id="dados" class="section">
+                    <h2 style="margin-bottom: 1.5rem;">📋 Dados Brutos — Todos os Municípios</h2>
+
+                    <div style="margin-bottom: 1rem;">
+                        <input type="text" id="searchInput" placeholder="🔍 Buscar município..." style="padding: 0.75rem; width: 100%; background: var(--bg-card); color: var(--text-primary); border: 1px solid #2A3144; border-radius: 4px; margin-bottom: 1rem;">
+                    </div>
+
+                    <div class="table-wrapper" style="max-height: 600px; overflow-y: auto;">
+                        <table id="allDataTable">
+                            <thead>
+                                <tr>
+                                    <th>Município</th>
+                                    <th>IN</th>
+                                    <th>Classe Nac.</th>
+                                    <th>IEB</th>
+                                    <th>Classe EB</th>
+                                    <th>Eixo</th>
+                                    <th>Pred. 2026</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATA -->
+    <script src="data.js"></script>
+    <script src="secoes_2022.js"></script>
+
+    <!-- SCRIPTS -->
+    <script>
+        let chartsInstances = {};
+        let mapInstance = null;
+        let mapSecoesInstance = null;
+        let currentMunicipio = null;
+
+        // ============= INIT =============
+        // DIAGNÓSTICO
+        function runDiagnostics() {
+            console.log('\n========== DIAGNÓSTICO DO DASHBOARD ==========\n');
+
+            console.log('1️⃣ Verificando DASHBOARD_DATA...');
+            if (typeof DASHBOARD_DATA === 'undefined') {
+                console.error('   ❌ DASHBOARD_DATA não definido!');
+                return false;
+            }
+            console.log('   ✅ DASHBOARD_DATA existe');
+
+            if (!DASHBOARD_DATA.municipios) {
+                console.error('   ❌ DASHBOARD_DATA.municipios não existe!');
+                return false;
+            }
+            console.log('   ✅ DASHBOARD_DATA.municipios existe');
+
+            const numMun = Object.keys(DASHBOARD_DATA.municipios).length;
+            console.log('   ✅ Total de municípios:', numMun);
+
+            console.log('\n2️⃣ Testando getMunicipios()...');
+            try {
+                const mun = getMunicipios();
+                console.log('   ✅ getMunicipios() retorna:', mun.length, 'municípios');
+
+                if (mun.length > 0) {
+                    console.log('   ✅ Primeiro município:', mun[0].name, 'IN:', mun[0].indice_nacional, 'IEB:', mun[0].indice_eb);
+                }
+            } catch (e) {
+                console.error('   ❌ Erro em getMunicipios():', e.message);
+                return false;
+            }
+
+            console.log('\n3️⃣ Verificando canvas #scatterChart...');
+            const canvas = document.getElementById('scatterChart');
+            if (!canvas) {
+                console.error('   ❌ Canvas #scatterChart não encontrado!');
+                return false;
+            }
+            console.log('   ✅ Canvas encontrado, dimensões:', canvas.width, 'x', canvas.height);
+
+            console.log('\n✅ TODOS OS TESTES PASSARAM!\n');
+            return true;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Rodar diagnóstico
+            const diagOk = runDiagnostics();
+
+            if (!diagOk) {
+                console.error('❌ Diagnóstico falhou! Verifique os erros acima.');
+                return;
+            }
+
+            if (!DASHBOARD_DATA || !DASHBOARD_DATA.municipios) {
+                console.error('❌ ERRO: data.js não foi carregado!');
+                console.error('   Certifique-se de que está usando HTTP (http://localhost:8000)');
+                alert('⚠️ ERRO: Dados não carregados.\n\nUse:\ncd relatorios tse/dashboard-2026\npython3 -m http.server 8000\n\nDepois acesse: http://localhost:8000');
+                return;
+            }
+            const numMunicipios = Object.keys(DASHBOARD_DATA.municipios).length;
+            console.log('✅ Dashboard inicializado com', numMunicipios, 'municípios');
+
+            populateKPIs();
+            populateMunicipoSelect();
+            populateTables();
+            initCharts();
+            initMaps();
+        });
+
+        // ============= KPIs DINÂMICOS =============
+        function populateKPIs() {
+            const municipios = getMunicipios();
+            const totalMunicipios = municipios.length;
+
+            let counts = {
+                bastiao_lulista: 0,
+                tendencia_lulista: 0,
+                seguro_eb: 0,
+                dificil: 0
+            };
+
+            municipios.forEach(mun => {
+                // Contar Bastião Lulista
+                if (mun.classificacao_nacional === 'Bastião Lulista') {
+                    counts.bastiao_lulista++;
+                }
+
+                // Contar Tendência Lulista
+                if (mun.classificacao_nacional === 'Tendência Lulista') {
+                    counts.tendencia_lulista++;
+                }
+
+                // Contar Seguro EB (preditivo 2026)
+                if (mun.preditivo_2026?.classificacao === 'SEGURO EB') {
+                    counts.seguro_eb++;
+                }
+
+                // Contar Difícil (preditivo 2026)
+                if (mun.preditivo_2026?.classificacao === 'DIFÍCIL') {
+                    counts.dificil++;
+                }
+            });
+
+            // Atualizar header
+            document.getElementById('headerSubtitle').textContent = `Inteligência Estratégica — ${totalMunicipios} Municípios | 4 Eleições | Modelo Preditivo 2026`;
+
+            // Renderizar KPIs com tooltips
+            const kpiGrid = document.getElementById('kpiGrid');
+            kpiGrid.innerHTML = `
+                <div class="kpi-card bastiao-lulista">
+                    <div class="kpi-number">${counts.bastiao_lulista}</div>
+                    <div class="kpi-label">
+                        Bastião Lulista
+                        <div class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">Municípios onde PT/Lula tem votação historicamente muito forte. Índice Nacional > +0.20. Base consolidada para EB.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kpi-card tendencia-lulista">
+                    <div class="kpi-number">${counts.tendencia_lulista}</div>
+                    <div class="kpi-label">
+                        Tendência Lulista
+                        <div class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">Municípios com tendência favorável ao PT/Lula. Índice Nacional entre +0.05 e +0.20. Espaço para expansão de votação.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kpi-card seguro-eb">
+                    <div class="kpi-number" style="color: var(--bastiao-eb);">${counts.seguro_eb}</div>
+                    <div class="kpi-label">
+                        Seguro EB 2026
+                        <div class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text"><strong>PROGNÓSTICO 2026:</strong> Top 23% (14 municípios) com melhor correlação EB-Lula e desempenho histórico. Reeleição viável. Consolidar base.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kpi-card dificil">
+                    <div class="kpi-number" style="color: #E74C3C;">${counts.dificil}</div>
+                    <div class="kpi-label">
+                        Difícil 2026
+                        <div class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text"><strong>ZONA DE RISCO:</strong> Bottom 19% (12 municípios) com menor correlação com Lula e desempenho histórico fraco. Requer análise e alocação estratégica.</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============= NAVEGAÇÃO =============
+        function switchSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            // Remove active from buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+
+            // Mark button as active
+            event.target.classList.add('active');
+
+            // Re-initialize maps if needed
+            if (sectionId === 'overview' && mapInstance === null) {
+                setTimeout(() => initMaps(), 100);
+            }
+
+            // Initialize map-secoes for impulsionamento tab
+            if (sectionId === 'impulsionamento' && mapSecoesInstance === null) {
+                setTimeout(() => initMapSecoes(), 100);
+            }
+        }
+
+        // ============= DADOS =============
+        function getMunicipios() {
+            if (!DASHBOARD_DATA || !DASHBOARD_DATA.municipios) {
+                console.error('❌ DASHBOARD_DATA não carregado! Verifique se data.js está sendo servido via HTTP');
+                return [];
+            }
+            const municipios = DASHBOARD_DATA.municipios || {};
+            return Object.entries(municipios).map(([name, data]) => ({
+                name,
+                ...data
+            }));
+        }
+
+        function populateMunicipoSelect() {
+            const select = document.getElementById('municipioSelect');
+
+            // Adicionar opção ESTADO (Geral) como padrão
+            const optionEstado = document.createElement('option');
+            optionEstado.value = 'ESTADO';
+            optionEstado.textContent = '🎯 ESTADO (Geral)';
+            select.appendChild(optionEstado);
+
+            const municipios = getMunicipios();
+
+            municipios.forEach(mun => {
+                const option = document.createElement('option');
+                option.value = mun.name;
+                option.textContent = mun.name;
+                select.appendChild(option);
+            });
+
+            select.addEventListener('change', (e) => {
+                currentMunicipio = e.target.value;
+                if (currentMunicipio) {
+                    updateHistoricoCharts(currentMunicipio);
+                }
+            });
+
+            // Carregar ESTADO por padrão
+            select.value = 'ESTADO';
+            updateHistoricoCharts('ESTADO');
+        }
+
+        // ============= TABELAS =============
+        function populateTables() {
+            const municipios = getMunicipios();
+
+            // Top Favoráveis
+            const favoraveis = municipios
+                .filter(m => m.indice_eb !== undefined)
+                .sort((a, b) => b.indice_eb - a.indice_eb)
+                .slice(0, 10);
+
+            const topFavBody = document.querySelector('#topFavoraveis tbody');
+            favoraveis.forEach(m => {
+                const row = topFavBody.insertRow();
+                row.innerHTML = `
+                    <td><strong>${m.name}</strong></td>
+                    <td style="color: var(--bastiao-eb);">${m.indice_eb.toFixed(3)}</td>
+                `;
+            });
+
+            // Top Difíceis
+            const dificeis = municipios
+                .filter(m => m.indice_eb !== undefined)
+                .sort((a, b) => a.indice_eb - b.indice_eb)
+                .slice(0, 10);
+
+            const topDifBody = document.querySelector('#topDificeis tbody');
+            dificeis.forEach(m => {
+                const row = topDifBody.insertRow();
+                row.innerHTML = `
+                    <td><strong>${m.name}</strong></td>
+                    <td style="color: var(--bastiao-anti);">${m.indice_eb.toFixed(3)}</td>
+                `;
+            });
+
+            // Classificação Municipal
+            const munTable = document.querySelector('#municipiosTable tbody');
+            municipios.forEach(m => {
+                const row = munTable.insertRow();
+                const classeNacBadge = `badge-${m.classificacao_nacional.toLowerCase().replace(/ /g, '-')}`;
+                const classeEBBadge = `badge-${m.classificacao_eb.toLowerCase().replace(/ /g, '-')}`;
+
+                row.innerHTML = `
+                    <td><strong>${m.name}</strong></td>
+                    <td>${m.indice_nacional.toFixed(3)}</td>
+                    <td><span class="badge ${classeNacBadge}">${m.classificacao_nacional}</span></td>
+                    <td>${m.indice_eb.toFixed(3)}</td>
+                    <td><span class="badge ${classeEBBadge}">${m.classificacao_eb}</span></td>
+                    <td><span class="badge badge-${m.eixo_estrategico.toLowerCase()}">${m.eixo_estrategico}</span></td>
+                    <td><span class="badge" style="background: #F39C12; color: white;">${m.preditivo_2026.classificacao}</span></td>
+                `;
+            });
+
+            // Prioridades
+            const priorTable = document.querySelector('#prioridades tbody');
+            municipios
+                .filter(m => m.preditivo_2026.classificacao.includes('BATTLEGROUND') || m.preditivo_2026.classificacao === 'COMPETITIVO PRÓ-EB')
+                .sort((a, b) => b.preditivo_2026.score - a.preditivo_2026.score)
+                .forEach(m => {
+                    const row = priorTable.insertRow();
+                    row.innerHTML = `
+                        <td><strong>${m.name}</strong></td>
+                        <td>${(m.preditivo_2026.score * 100).toFixed(1)}%</td>
+                        <td><span class="badge" style="background: #F39C12; color: white;">${m.preditivo_2026.classificacao}</span></td>
+                        <td>${m.preditivo_2026.tendencia}</td>
+                    `;
+                });
+
+            // All Data
+            const allTable = document.querySelector('#allDataTable tbody');
+            municipios.forEach(m => {
+                const row = allTable.insertRow();
+                row.innerHTML = `
+                    <td><strong>${m.name}</strong></td>
+                    <td>${m.indice_nacional.toFixed(3)}</td>
+                    <td><span class="badge badge-${m.classificacao_nacional.toLowerCase().replace(/ /g, '-')}">${m.classificacao_nacional}</span></td>
+                    <td>${m.indice_eb.toFixed(3)}</td>
+                    <td><span class="badge badge-${m.classificacao_eb.toLowerCase().replace(/ /g, '-')}">${m.classificacao_eb}</span></td>
+                    <td>${m.eixo_estrategico}</td>
+                    <td>${m.preditivo_2026.classificacao}</td>
+                `;
+            });
+
+            // Search
+            document.getElementById('searchInput').addEventListener('keyup', (e) => {
+                const filter = e.target.value.toLowerCase();
+                const rows = allTable.querySelectorAll('tr');
+                rows.forEach(row => {
+                    const name = row.textContent.toLowerCase();
+                    row.style.display = name.includes(filter) ? '' : 'none';
+                });
+            });
+        }
+
+        // ============= CHARTS =============
+        function initCharts() {
+            try {
+                // Scatter: IN × IEB
+                const municipios = getMunicipios();
+                console.log('📊 Inicializando scatter chart com', municipios.length, 'municípios');
+
+                const scatterEl = document.getElementById('scatterChart');
+
+                if (!scatterEl) {
+                    console.warn('⚠️ Elemento scatterChart não encontrado');
+                    return;
+                }
+
+                const ctx = scatterEl.getContext('2d');
+
+                const e1Data = municipios.filter(m => m.eixo_estrategico === 'E1').map(m => ({x: m.indice_nacional, y: m.indice_eb, r: 6}));
+                const e5Data = municipios.filter(m => m.eixo_estrategico === 'E5').map(m => ({x: m.indice_nacional, y: m.indice_eb, r: 6}));
+                const e6Data = municipios.filter(m => m.eixo_estrategico === 'E6').map(m => ({x: m.indice_nacional, y: m.indice_eb, r: 6}));
+
+                console.log('  E1 (Lulismo):', e1Data.length, 'pontos');
+                console.log('  E5 (Bolsonarismo Interior):', e5Data.length, 'pontos');
+                console.log('  E6 (Bolsonarismo Manaus):', e6Data.length, 'pontos');
+
+                const data = {
+                    datasets: [
+                        {
+                            label: 'E1 (Lulismo Interior)',
+                            data: e1Data,
+                            backgroundColor: 'rgba(231, 76, 60, 0.6)',
+                            borderColor: 'rgba(231, 76, 60, 1)',
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                            tension: 0,
+                            showLine: false
+                        },
+                        {
+                            label: 'E5 (Bolsonarismo Interior)',
+                            data: e5Data,
+                            backgroundColor: 'rgba(46, 134, 193, 0.6)',
+                            borderColor: 'rgba(46, 134, 193, 1)',
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                            tension: 0,
+                            showLine: false
+                        },
+                        {
+                            label: 'E6 (Bolsonarismo Manaus)',
+                            data: e6Data,
+                            backgroundColor: 'rgba(93, 173, 226, 0.6)',
+                            borderColor: 'rgba(93, 173, 226, 1)',
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                            tension: 0,
+                            showLine: false
+                        }
+                    ]
+                };
+
+                const scatterChart = new Chart(ctx, {
+                    type: 'line',
+                    data: data,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        showLine: false,
+                        elements: {
+                            line: { borderWidth: 0 },
+                            point: { radius: 6, hitRadius: 10, hoverRadius: 8 }
+                        },
+                        plugins: {
+                            legend: {
+                                labels: { color: 'var(--text-primary)' }
+                            },
+                            filler: { propagate: false }
+                        },
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                min: -1,
+                                max: 1,
+                                title: {
+                                    display: true,
+                                    text: '← Bolsonarista | Lulista →',
+                                    color: 'var(--text-secondary)',
+                                    font: { size: 12 }
+                                },
+                                ticks: { color: 'var(--text-secondary)' },
+                                grid: { color: '#2A3144' }
+                            },
+                            y: {
+                                type: 'linear',
+                                min: -0.5,
+                                max: 0.5,
+                                title: {
+                                    display: true,
+                                    text: '← Anti-EB | Pro-EB →',
+                                    color: 'var(--text-secondary)',
+                                    font: { size: 12 }
+                                },
+                                ticks: { color: 'var(--text-secondary)' },
+                                grid: { color: '#2A3144' }
+                            }
+                        }
+                    }
+                });
+
+                chartsInstances.scatter = scatterChart;
+                console.log('✅ Scatter chart inicializado com', e1Data.length + e5Data.length + e6Data.length, 'pontos totais');
+
+                // Inicializar também o gráfico preditivo
+                initPreditivoChart();
+            } catch (error) {
+                console.error('❌ Erro ao inicializar scatter chart:', error);
+                console.error('   Stack:', error.stack);
+            }
+        }
+
+        function updateHistoricoCharts(municipio) {
+            if (!municipio) return;
+
+            // Se for ESTADO, usar dados estaduais
+            let mun;
+            if (municipio === 'ESTADO') {
+                mun = DASHBOARD_DATA.estado;
+                if (!mun) {
+                    console.error('❌ Dados estaduais não encontrados');
+                    return;
+                }
+            } else {
+                mun = DASHBOARD_DATA.municipios[municipio];
+                if (!mun) return;
+            }
+
+            // ============= MOSTRAR INFORMAÇÕES DO MUNICÍPIO =============
+            document.getElementById('municipioInfo').style.display = 'grid';
+            document.getElementById('municEixo').textContent = mun.eixo_estrategico || '—';
+            document.getElementById('municEixoLabel').textContent = mun.eixo_label || '—';
+            document.getElementById('municClassNac').textContent = mun.classificacao_nacional || '—';
+            document.getElementById('municIndiceNac').textContent = `IN: ${(mun.indice_nacional || 0).toFixed(3)}`;
+            document.getElementById('municClassEB').textContent = mun.classificacao_eb || '—';
+            document.getElementById('municIndiceEB').textContent = `IEB: ${(mun.indice_eb || 0).toFixed(3)}`;
+            document.getElementById('municPred26').textContent = (mun.preditivo_2026 && mun.preditivo_2026.classificacao) ? mun.preditivo_2026.classificacao : '—';
+            document.getElementById('municPredScore').textContent = (mun.preditivo_2026 && mun.preditivo_2026.score !== undefined) ? `Score: ${(mun.preditivo_2026.score * 100).toFixed(1)}%` : 'Score: —';
+
+            // ============= TABELA PT × DIREITA =============
+            const tabelaPres = document.getElementById('tabelaPresidencial').querySelector('tbody');
+            tabelaPres.innerHTML = '';
+
+            const presData = [];
+            const anos = [2010, 2014, 2018, 2022];
+
+            anos.forEach(ano => {
+                // Tentar acessar com chave inteira ou string (para compatibilidade com ESTADO)
+                const data = mun.presidente[ano] || mun.presidente[String(ano)];
+                // Só incluir se NÃO for zero (pois dados antigos não foram carregados)
+                if (data && (data.pt > 0 || data.direita > 0)) {
+                    presData.push({
+                        ano: ano,
+                        pt: data.pt,
+                        direita: data.direita,
+                        margem: data.margem
+                    });
+                }
+            });
+
+            // Se não tiver dados, mostrar mensagem
+            if (presData.length === 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td colspan="6" style="text-align: center; color: var(--text-muted); padding: 1rem;">⚠️ Dados históricos em processamento (apenas 2022 disponível)</td>`;
+                tabelaPres.appendChild(tr);
+            } else {
+                // Calcular terceira via e variação
+                presData.forEach((row, idx) => {
+                    const terceiraVia = (100 - row.pt - row.direita).toFixed(1);
+                    const saldo = (row.pt - row.direita).toFixed(1);
+                    let variacao = '—';
+
+                    if (idx > 0) {
+                        const prev = (presData[idx-1].pt - presData[idx-1].direita);
+                        variacao = ((row.pt - row.direita) - prev).toFixed(1);
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${row.ano}</strong></td>
+                        <td style="color: #E74C3C;">${row.pt.toFixed(1)}%</td>
+                        <td style="color: #2E86C1;">${row.direita.toFixed(1)}%</td>
+                        <td>${terceiraVia}%</td>
+                        <td style="font-weight: 600; color: ${saldo > 0 ? '#E74C3C' : '#2E86C1'};">${saldo}</td>
+                        <td>${variacao}</td>
+                    `;
+                    tabelaPres.appendChild(tr);
+                });
+            }
+
+            // Linha preditiva 2026
+            const tr2026 = document.createElement('tr');
+            tr2026.style.borderTop = '2px solid #2A3144';
+            tr2026.style.fontWeight = '700';
+            const predClass = (mun.preditivo_2026 && mun.preditivo_2026.classificacao) ? mun.preditivo_2026.classificacao : '—';
+            const pt2026 = (mun.preditivo_2026 && mun.preditivo_2026.pt_projecao !== undefined) ? mun.preditivo_2026.pt_projecao : '—';
+            const dir2026 = (mun.preditivo_2026 && mun.preditivo_2026.direita_projecao !== undefined) ? mun.preditivo_2026.direita_projecao : '—';
+            const terceira2026 = (pt2026 !== '—' && dir2026 !== '—') ? (100 - pt2026 - dir2026).toFixed(1) : '—';
+            const saldo2026 = (pt2026 !== '—' && dir2026 !== '—') ? (pt2026 - dir2026).toFixed(1) : '—';
+            tr2026.innerHTML = `
+                <td style="background: var(--bg-primary);">2026*</td>
+                <td style="background: var(--bg-primary); color: #E74C3C;">${pt2026 !== '—' ? pt2026.toFixed(1) + '%' : '—'}</td>
+                <td style="background: var(--bg-primary); color: #2E86C1;">${dir2026 !== '—' ? dir2026.toFixed(1) + '%' : '—'}</td>
+                <td style="background: var(--bg-primary);">${terceira2026 !== '—' ? terceira2026 + '%' : '—'}</td>
+                <td style="background: var(--bg-primary); color: #F39C12; font-weight: 700;">${saldo2026 !== '—' ? (saldo2026 > 0 ? '+' : '') + saldo2026 : '—'}</td>
+                <td style="background: var(--bg-primary); color: #F39C12; font-size: 0.85rem;">${predClass}</td>
+            `;
+            tabelaPres.appendChild(tr2026);
+
+            // ============= TABELA EDUARDO BRAGA =============
+            const tabelaEB = document.getElementById('tabelaEB').querySelector('tbody');
+            tabelaEB.innerHTML = '';
+
+            const ebData = [];
+            const cargos = {
+                2010: 'Senador',
+                2014: 'Governador',
+                2018: 'Senador',
+                2022: 'Governador'
+            };
+            const adversarios = {
+                2010: 'Arthur Virgílio',
+                2014: 'José Melo',
+                2018: 'Plínio Valério',
+                2022: 'Wilson Lima'
+            };
+
+            anos.forEach(ano => {
+                // Tentar acessar com chave inteira ou string (para compatibilidade com ESTADO)
+                const data = mun.eb[ano] || mun.eb[String(ano)];
+                if (data) {
+                    ebData.push({
+                        ano: ano,
+                        votos_pct: data.votos_pct,
+                        media_estado: data.media_estado,
+                        diff: data.diff,
+                        cargo: cargos[ano],
+                        adversario: adversarios[ano],
+                        adversario_pct: data.adversario_pct || 0
+                    });
+                }
+            });
+
+            // Se faltou 2022, adicionar com dados placeholder
+            if (!ebData.find(d => d.ano === 2022)) {
+                ebData.push({
+                    ano: 2022,
+                    votos_pct: 0,
+                    media_estado: 0,
+                    diff: 0,
+                    cargo: cargos[2022],
+                    adversario: adversarios[2022]
+                });
+            }
+
+            // Calcular variação
+            ebData.forEach((row, idx) => {
+                let variacao = '—';
+                if (idx > 0 && row.votos_pct > 0) {
+                    variacao = (row.votos_pct - ebData[idx-1].votos_pct).toFixed(1);
+                }
+
+                const tr = document.createElement('tr');
+
+                // Coluna de Adversário com tooltip - usar percentual real do adversário
+                const advPct = row.adversario_pct > 0 ? row.adversario_pct.toFixed(1) : '—';
+                const advTooltip = row.adversario_pct > 0 ? `title="${row.adversario}"` : '';
+
+                // SALDO = EB% - Adversário%
+                const saldo = row.votos_pct - row.adversario_pct;
+                const saldoColor = saldo > 0 ? '#27AE60' : saldo < 0 ? '#E74C3C' : '#F4D03F';
+                const saldoText = row.votos_pct > 0 && row.adversario_pct > 0 ? (saldo > 0 ? '+' : '') + saldo.toFixed(1) : '—';
+
+                tr.innerHTML = `
+                    <td><strong>${row.ano}</strong></td>
+                    <td style="color: var(--accent-red);">${row.votos_pct > 0 ? row.votos_pct.toFixed(1) + '%' : '—'}</td>
+                    <td style="cursor: help;" ${advTooltip}>${advPct}${advPct !== '—' ? '%' : ''}</td>
+                    <td style="font-size: 0.8rem; color: var(--text-muted);">${row.media_estado > 0 ? row.media_estado.toFixed(1) + '%' : '—'}</td>
+                    <td style="font-weight: 600; color: ${saldoColor};">${saldoText}</td>
+                    <td style="font-size: 0.75rem;">${row.cargo}</td>
+                `;
+                tabelaEB.appendChild(tr);
+            });
+
+            // Linha preditiva 2026 para EB
+            const trEB2026 = document.createElement('tr');
+            trEB2026.style.borderTop = '2px solid #2A3144';
+            trEB2026.style.fontWeight = '700';
+            const pred2026 = mun.preditivo_2026 || {};
+            const pred2026Class = pred2026.classificacao ? pred2026.classificacao : '—';
+            const eb2026 = (pred2026.eb_projecao !== undefined) ? pred2026.eb_projecao : '—';
+            const adv2026 = (pred2026.adversario_projecao !== undefined) ? pred2026.adversario_projecao : '—';
+            const saldoEB2026 = (eb2026 !== '—' && adv2026 !== '—') ? (eb2026 - adv2026).toFixed(1) : '—';
+            trEB2026.innerHTML = `
+                <td style="background: var(--bg-primary);">2026*</td>
+                <td style="background: var(--bg-primary); color: var(--accent-red);">${eb2026 !== '—' ? eb2026.toFixed(1) + '%' : '—'}</td>
+                <td style="background: var(--bg-primary);">${adv2026 !== '—' ? adv2026.toFixed(1) + '%' : '—'}</td>
+                <td style="background: var(--bg-primary);">—</td>
+                <td style="background: var(--bg-primary); color: #F39C12; font-weight: 700;">${saldoEB2026 !== '—' ? (saldoEB2026 > 0 ? '+' : '') + saldoEB2026 : '—'}</td>
+                <td style="background: var(--bg-primary); color: #F39C12; font-size: 0.85rem;">${pred2026Class}</td>
+            `;
+            tabelaEB.appendChild(trEB2026);
+
+            // ============= GRÁFICOS =============
+            // Chart Presidente (2010-2022)
+            const presContext = document.getElementById('historicaPresChart').getContext('2d');
+            if (chartsInstances.historicaPres) {
+                chartsInstances.historicaPres.destroy();
+            }
+
+            const presValues = [
+                mun.presidente[2010]?.pt - mun.presidente[2010]?.direita || 0,
+                mun.presidente[2014]?.pt - mun.presidente[2014]?.direita || 0,
+                mun.presidente[2018]?.pt - mun.presidente[2018]?.direita || 0,
+                mun.presidente[2022]?.pt - mun.presidente[2022]?.direita || 0
+            ];
+
+            chartsInstances.historicaPres = new Chart(presContext, {
+                type: 'bar',
+                data: {
+                    labels: ['2010', '2014', '2018', '2022'],
+                    datasets: [{
+                        label: 'Saldo PT - Direita (%)',
+                        data: presValues,
+                        backgroundColor: presValues.map(v => v > 0 ? '#E74C3C' : '#2E86C1'),
+                        borderColor: 'transparent'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'x',
+                    plugins: {
+                        legend: { labels: { color: 'var(--text-primary)' } },
+                        title: { display: true, text: `${municipio} - Saldo Presidencial`, color: 'var(--text-primary)' }
+                    },
+                    scales: {
+                        y: {
+                            ticks: { color: 'var(--text-secondary)' },
+                            grid: { color: '#2A3144' }
+                        },
+                        x: {
+                            ticks: { color: 'var(--text-secondary)' },
+                            grid: { color: '#2A3144' }
+                        }
+                    }
+                }
+            });
+
+            // Chart EB (2010-2022)
+            const contexto = document.getElementById('historicaEBChart').getContext('2d');
+            if (chartsInstances.historicaEB) {
+                chartsInstances.historicaEB.destroy();
+            }
+
+            const ebValues = [
+                mun.eb[2010]?.votos_pct || 0,
+                mun.eb[2014]?.votos_pct || 0,
+                mun.eb[2018]?.votos_pct || 0,
+                mun.eb[2022]?.votos_pct || 0
+            ];
+
+            chartsInstances.historicaEB = new Chart(contexto, {
+                type: 'line',
+                data: {
+                    labels: ['2010', '2014', '2018', '2022'],
+                    datasets: [{
+                        label: 'Votação de Eduardo Braga (%)',
+                        data: ebValues,
+                        borderColor: '#C41E3A',
+                        backgroundColor: 'rgba(196, 30, 58, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 6,
+                        pointBackgroundColor: '#C41E3A'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: 'var(--text-primary)' } },
+                        title: { display: true, text: `${municipio} - Eduardo Braga`, color: 'var(--text-primary)' }
+                    },
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 100,
+                            ticks: { color: 'var(--text-secondary)' },
+                            grid: { color: '#2A3144' }
+                        },
+                        x: {
+                            ticks: { color: 'var(--text-secondary)' },
+                            grid: { color: '#2A3144' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============= MAPS =============
+        // Coordenadas dos 62 municípios do Amazonas
+        const MUNICIPIOS_COORDS = {
+            "ALVARÃES": [-2.6811, -64.6628],
+            "AMATURÁ": [-0.8281, -67.9308],
+            "ANAMÃ": [-1.8333, -64.7333],
+            "ANORI": [-1.6436, -61.8353],
+            "APUÍ": [-7.5908, -61.5033],
+            "ATALAIA DO NORTE": [0.4786, -66.9328],
+            "AUTAZES": [-3.5828, -60.6008],
+            "BARCELOS": [0.9744, -62.9289],
+            "BARREIRINHA": [-1.8308, -59.3283],
+            "BENJAMIN CONSTANT": [-4.3799, -70.0264],
+            "BERURI": [-1.5528, -63.1167],
+            "BOA VISTA DO RAMOS": [-2.8158, -60.3497],
+            "BOCA DO ACRE": [-8.7342, -67.3911],
+            "BORBA": [-4.3922, -59.5881],
+            "CAAPIRANGA": [-4.4286, -64.6353],
+            "CANUTAMA": [-7.2667, -64.4333],
+            "CARAUARI": [-4.8856, -66.8928],
+            "CAREIRO": [-3.2481, -59.9422],
+            "CAREIRO DA VÁRZEA": [-3.3333, -60.4167],
+            "COARI": [-4.0756, -63.1356],
+            "CODAJÁS": [-3.8439, -61.9097],
+            "EIRUNEPÉ": [-6.6628, -69.8761],
+            "ENVIRA": [-7.6439, -69.8944],
+            "FONTE BOA": [-2.5156, -66.0156],
+            "GUAJARÁ": [-4.2083, -60.6667],
+            "HUMAITÁ": [-7.5039, -63.0211],
+            "IPIXUNA": [-7.7547, -61.4311],
+            "IRANDUBA": [-2.8889, -60.3167],
+            "ITACOATIARA": [-3.1303, -58.4544],
+            "ITAMARATI": [-3.1544, -65.5181],
+            "ITAPIRANGA": [-5.1567, -68.8417],
+            "JAPURÁ": [-1.3667, -66.8667],
+            "JURUÁ": [-1.7395, -65.2844],
+            "JUTAÍ": [-2.7833, -65.8],
+            "LÁBREA": [-7.2683, -64.7658],
+            "MANACAPURU": [-3.3, -60.5833],
+            "MANAQUIRI": [-3.4667, -60.3333],
+            "MANAUS": [-3.1190, -60.0217],
+            "MANICORÉ": [-5.8061, -61.2992],
+            "MARAÃ": [-0.55, -66.4],
+            "MAUÉS": [-3.3931, -57.7439],
+            "NHAMUNDÁ": [-0.5208, -58.2906],
+            "NOVA OLINDA DO NORTE": [-3.7658, -59.0331],
+            "NOVO AIRÃO": [-2.5906, -61.0253],
+            "NOVO ARIPUANÃ": [-5.1256, -60.3314],
+            "PARINTINS": [-2.6328, -56.7395],
+            "PAUINI": [-7.7167, -66.9833],
+            "PRESIDENTE FIGUEIREDO": [-1.8633, -60.8236],
+            "RIO PRETO DA EVA": [-2.5997, -59.3958],
+            "SANTA ISABEL DO RIO NEGRO": [0.3519, -65.0186],
+            "SANTO ANTÔNIO DO IÇÁ": [-3.1, -68.65],
+            "SILVES": [-2.95, -60.65],
+            "SÃO GABRIEL DA CACHOEIRA": [0.1278, -67.0892],
+            "SÃO PAULO DE OLIVENÇA": [-3.3833, -69.95],
+            "SÃO SEBASTIÃO DO UATUMÃ": [-1.0169, -59.2853],
+            "TABATINGA": [-4.2531, -69.9475],
+            "TAPAUÁ": [-4.0167, -66.2],
+            "TEFÉ": [-3.3631, -64.7136],
+            "TONANTINS": [-1.8333, -67.8],
+            "UARINI": [0.6667, -62.7667],
+            "URUCARÁ": [-1.9972, -59.3247],
+            "URUCURITUBA": [-3.0631, -59.7958],
+        };
+
+        function initMaps() {
+            if (mapInstance) return;
+
+            mapInstance = L.map('map').setView([-3.119, -60.022], 6);
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(mapInstance);
+
+            // Add markers com coordenadas reais
+            const municipios = getMunicipios();
+
+            municipios.forEach(m => {
+                const coords = MUNICIPIOS_COORDS[m.name];
+                if (!coords) return; // Skip se não tiver coordenadas
+
+                let color = '#E74C3C';
+                if (m.eixo_estrategico === 'E5') {
+                    color = '#2E86C1';
+                } else if (m.eixo_estrategico === 'E6') {
+                    color = '#5DADE2';
+                }
+
+                const marker = L.circleMarker(coords, {
+                    radius: 6,
+                    fillColor: color,
+                    color: color,
+                    weight: 2,
+                    opacity: 0.9,
+                    fillOpacity: 0.7
+                }).addTo(mapInstance);
+
+                marker.bindPopup(`
+                    <div style="font-size: 0.9rem;">
+                        <strong>${m.name}</strong><br>
+                        <small>${m.eixo_label}</small><br>
+                        <small>IN: ${m.indice_nacional.toFixed(3)}</small><br>
+                        <small>IEB: ${m.indice_eb.toFixed(3)}</small>
+                    </div>
+                `);
+            });
+        }
+
+        function initMapSecoes() {
+            if (mapSecoesInstance) return;
+
+            mapSecoesInstance = L.map('map-secoes').setView([-3.119, -60.022], 6);
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(mapSecoesInstance);
+
+            // Add markers com coordenadas reais - Mapa de Seções Eleitorais
+            const municipios = getMunicipios();
+
+            municipios.forEach(m => {
+                const coords = MUNICIPIOS_COORDS[m.name];
+                if (!coords) return;
+
+                // Cores baseadas em Eixo Estratégico
+                let color = '#E74C3C';
+                if (m.eixo_estrategico === 'E1') {
+                    color = '#E74C3C';  // Vermelho - Lulismo
+                } else if (m.eixo_estrategico === 'E2') {
+                    color = '#FF6B6B';  // Vermelho claro
+                } else if (m.eixo_estrategico === 'E3') {
+                    color = '#F39C12';  // Laranja
+                } else if (m.eixo_estrategico === 'E4') {
+                    color = '#F1C40F';  // Amarelo
+                } else if (m.eixo_estrategico === 'E5') {
+                    color = '#2E86C1';  // Azul
+                } else if (m.eixo_estrategico === 'E6') {
+                    color = '#5DADE2';  // Azul claro - Bolsonarismo
+                }
+
+                const marker = L.circleMarker(coords, {
+                    radius: 8,
+                    fillColor: color,
+                    color: color,
+                    weight: 2,
+                    opacity: 0.9,
+                    fillOpacity: 0.8
+                }).addTo(mapSecoesInstance);
+
+                marker.bindPopup(`
+                    <div style="font-size: 0.9rem;">
+                        <strong>${m.name}</strong><br>
+                        <small style="color: ${color}; font-weight: 600;">${m.eixo_label}</small><br>
+                        <small>Preditivo: ${m.preditivo_2026.classificacao}</small><br>
+                        <small>Score: ${(m.preditivo_2026.score * 100).toFixed(0)}%</small>
+                    </div>
+                `);
+            });
+        }
+
+        // ============= PREDITIVO =============
+        function initPreditivoChart() {
+            const municipios = getMunicipios();
+            const classficacoes = {};
+
+            municipios.forEach(m => {
+                const cls = m.preditivo_2026.classificacao;
+                classficacoes[cls] = (classficacoes[cls] || 0) + 1;
+            });
+
+            // ===== CALCULAR RESUMO DE CENÁRIOS =====
+            // 1. Municípios Competitivos
+            const competitivos = (classficacoes['BATTLEGROUND'] || 0) +
+                                (classficacoes['COMPETITIVO PRÓ-EB'] || 0) +
+                                (classficacoes['COMPETITIVO CONTRA'] || 0);
+            document.getElementById('municipiosCompetitivos').textContent = competitivos;
+
+            // 2. Tendência Geral
+            let tendenciasPositivas = 0;
+            let tendenciasNegativas = 0;
+            municipios.forEach(m => {
+                if (m.preditivo_2026.tendencia === 'positiva') {
+                    tendenciasPositivas++;
+                } else if (m.preditivo_2026.tendencia === 'negativa') {
+                    tendenciasNegativas++;
+                }
+            });
+
+            const tendenciaGeral = tendenciasPositivas - tendenciasNegativas;
+            const tendenciaElement = document.getElementById('tendenciaGeral');
+            const tendenciaLabel = document.getElementById('tendenciaLabel');
+
+            if (tendenciaGeral > 0) {
+                tendenciaElement.textContent = '+' + tendenciaGeral;
+                tendenciaElement.style.color = '#27AE60';
+                tendenciaLabel.textContent = '📈 Positiva para EB';
+                tendenciaLabel.style.color = '#27AE60';
+            } else if (tendenciaGeral < 0) {
+                tendenciaElement.textContent = tendenciaGeral;
+                tendenciaElement.style.color = '#E74C3C';
+                tendenciaLabel.textContent = '📉 Negativa para EB';
+                tendenciaLabel.style.color = '#E74C3C';
+            } else {
+                tendenciaElement.textContent = '0';
+                tendenciaElement.style.color = '#F39C12';
+                tendenciaLabel.textContent = '➡️ Neutro';
+                tendenciaLabel.style.color = '#F39C12';
+            }
+
+            // 3. Margem Esperada 2026
+            const estado = DASHBOARD_DATA.estado;
+            if (estado && estado.preditivo_2026) {
+                const ptProj = estado.preditivo_2026.pt_projecao || 0;
+                const dirProj = estado.preditivo_2026.direita_projecao || 0;
+                const margem = ptProj - dirProj;
+
+                const margemElement = document.getElementById('margemEsperada');
+                if (margem > 0) {
+                    margemElement.textContent = '+' + margem.toFixed(1) + '%';
+                    margemElement.style.color = '#E74C3C';
+                } else {
+                    margemElement.textContent = margem.toFixed(1) + '%';
+                    margemElement.style.color = '#2E86C1';
+                }
+            }
+
+            const ctx = document.getElementById('preditivoChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(classficacoes),
+                    datasets: [{
+                        data: Object.values(classficacoes),
+                        backgroundColor: ['#27AE60', '#F39C12', '#E67E22', '#E74C3C', '#95A5A6', '#3498DB']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#FFFFFF', font: { size: 12 } } }
+                    }
+                }
+            });
+
+            chartsInstances.preditivo = true;
+        }
+
+        // ============= IMPULSIONAMENTO - SEÇÕES =============
+        let secoesMarcadores = [];
+        let municipioFiltroAtual = null;
+
+        function initMapSecoes() {
+            if (mapSecoesInstance) return;
+
+            mapSecoesInstance = L.map('map-secoes').setView([-3.119, -60.022], 6);
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(mapSecoesInstance);
+
+            // Populara seletor de município
+            populateMunicipoImpulsionamento();
+
+            // Plotar todas as seções inicialmente
+            plotarSecoes();
+        }
+
+        function populateMunicipoImpulsionamento() {
+            const select = document.getElementById('municipioImpulsionamentoSelect');
+
+            if (!SECOES_2022) {
+                console.error('SECOES_2022 não carregado');
+                return;
+            }
+
+            const municipios = Object.keys(SECOES_2022).sort();
+
+            municipios.forEach(mun => {
+                const option = document.createElement('option');
+                option.value = mun;
+                const count = SECOES_2022[mun].length;
+                option.textContent = `${mun} (${count} seções)`;
+                select.appendChild(option);
+            });
+
+            select.addEventListener('change', (e) => {
+                municipioFiltroAtual = e.target.value || null;
+                plotarSecoes();
+
+                // Zoom ao município se selecionado
+                if (municipioFiltroAtual && SECOES_2022[municipioFiltroAtual]) {
+                    const secoes = SECOES_2022[municipioFiltroAtual];
+                    if (secoes.length > 0) {
+                        // Calcular centroide
+                        let lat_sum = 0, lon_sum = 0;
+                        secoes.forEach(s => {
+                            lat_sum += s.latitude;
+                            lon_sum += s.longitude;
+                        });
+                        const lat_media = lat_sum / secoes.length;
+                        const lon_media = lon_sum / secoes.length;
+
+                        // Zoom ao município
+                        mapSecoesInstance.setView([lat_media, lon_media], 11);
+                    }
+                }
+            });
+        }
+
+        function plotarSecoes() {
+            // Remover marcadores antigos
+            secoesMarcadores.forEach(marker => mapSecoesInstance.removeLayer(marker));
+            secoesMarcadores = [];
+
+            if (!SECOES_2022) return;
+
+            // Selecionar seções a plotar
+            let secoes_a_plotar = [];
+
+            if (municipioFiltroAtual) {
+                secoes_a_plotar = SECOES_2022[municipioFiltroAtual] || [];
+            } else {
+                // Todas as seções
+                for (let municipio in SECOES_2022) {
+                    secoes_a_plotar = secoes_a_plotar.concat(SECOES_2022[municipio]);
+                }
+            }
+
+            // Plotar cada seção
+            secoes_a_plotar.forEach(secao => {
+                const marker = L.circleMarker([secao.latitude, secao.longitude], {
+                    radius: municipioFiltroAtual ? 8 : 4,
+                    fillColor: secao.cor,
+                    color: secao.cor,
+                    weight: 2,
+                    opacity: 0.9,
+                    fillOpacity: 0.8
+                }).addTo(mapSecoesInstance);
+
+                // Popup com informações
+                const popup = `
+                    <div style="font-size: 0.9rem; font-weight: 600;">
+                        <strong>Seção ${secao.numero_secao}</strong><br>
+                        <small>${secao.municipio}</small><br><br>
+                        <small style="color: #888;">📍 ${secao.endereco}</small><br>
+                        <small style="color: #888;">📊 ${secao.categoria}</small><br>
+                        <small style="color: #888;">Score: ${(secao.preditivo_2026.score * 100).toFixed(0)}%</small>
+                    </div>
+                `;
+
+                marker.bindPopup(popup);
+
+                // Hover - mostrar tooltip
+                marker.on('mouseover', function() {
+                    this.openPopup();
+                });
+                marker.on('mouseout', function() {
+                    this.closePopup();
+                });
+
+                secoesMarcadores.push(marker);
+            });
+
+            console.log(`✅ Plotadas ${secoes_a_plotar.length} seções`);
+        }
+
+        function downloadSecoesCsv() {
+            if (!SECOES_2022) return;
+
+            let csv = 'numero_secao,municipio,categoria,latitude,longitude,raio_km,endereco,indice_nacional,indice_eb,preditivo_classificacao,preditivo_score\n';
+
+            const secoes_para_baixar = municipioFiltroAtual
+                ? (SECOES_2022[municipioFiltroAtual] || [])
+                : Object.values(SECOES_2022).flat();
+
+            secoes_para_baixar.forEach(secao => {
+                const linha = [
+                    secao.numero_secao,
+                    secao.municipio,
+                    secao.categoria,
+                    secao.latitude,
+                    secao.longitude,
+                    secao.raio_km,
+                    `"${secao.endereco.replace(/"/g, '""')}"`,
+                    secao.indice_nacional,
+                    secao.indice_eb,
+                    secao.preditivo_2026.classificacao,
+                    secao.preditivo_2026.score
+                ].join(',');
+                csv += linha + '\n';
+            });
+
+            // Download
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            const municipio_suffix = municipioFiltroAtual ? `_${municipioFiltroAtual}` : '_todos_municipios';
+            link.setAttribute('href', url);
+            link.setAttribute('download', `secoes_2022${municipio_suffix}.csv`);
+            link.style.visibility = 'hidden';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            console.log(`✅ Download iniciado: ${secoes_para_baixar.length} seções`);
+        }
+
+        // Botão de download
+        document.addEventListener('DOMContentLoaded', function() {
+            const btnDownload = document.getElementById('downloadSecoesCsv');
+            if (btnDownload) {
+                btnDownload.addEventListener('click', downloadSecoesCsv);
+            }
+        });
+    </script>
+</body>
+</html>
