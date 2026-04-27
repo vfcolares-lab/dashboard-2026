@@ -886,6 +886,31 @@ IEB = (perf_2010 × 0.10) +<br>
 
     <!-- SCRIPTS -->
     <script>
+        // Aguardar que SECOES_2022 esteja carregado
+        function aguardarSecoes() {
+            if (typeof SECOES_2022 === 'undefined') {
+                console.warn('SECOES_2022 ainda não carregado, aguardando...');
+                setTimeout(aguardarSecoes, 100);
+            } else {
+                console.log('✅ SECOES_2022 carregado com sucesso');
+                inicializarAposCarregar();
+            }
+        }
+
+        function inicializarAposCarregar() {
+            // Inicializar impulsionamento quando tudo estiver pronto
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    console.log('Pronto para inicializar impulsionamento');
+                });
+            }
+        }
+
+        // Começar a aguardar
+        aguardarSecoes();
+    </script>
+
+    <script>
         let chartsInstances = {};
         let mapInstance = null;
         let mapSecoesInstance = null;
@@ -1897,10 +1922,12 @@ IEB = (perf_2010 × 0.10) +<br>
             const select = document.getElementById('municipioImpulsionamentoSelect');
 
             if (!SECOES_2022) {
-                console.error('SECOES_2022 não carregado');
+                console.error('❌ SECOES_2022 não carregado');
+                setTimeout(populateMunicipoImpulsionamento, 500); // Tentar novamente
                 return;
             }
 
+            console.log('✅ Populando seletor com', Object.keys(SECOES_2022).length, 'municípios');
             const municipios = Object.keys(SECOES_2022).sort();
 
             municipios.forEach(mun => {
