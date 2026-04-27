@@ -1,0 +1,84 @@
+═══════════════════════════════════════════════════════════════════════════════
+  INSTRUÇÕES PARA RECUPERAR ESSA VERSÃO NO FUTURO
+═══════════════════════════════════════════════════════════════════════════════
+
+SITUAÇÃO: Você mexeu no código, algo quebrou, e quer voltar para a versão que estava funcionando perfeitamente.
+
+═══════════════════════════════════════════════════════════════════════════════
+OPÇÃO 1: USAR O GIT (mais fácil)
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Abra o terminal/CMD no diretório do projeto:
+   cd "/Users/vitorcolares/Desktop/relatorios tse/dashboard-2026"
+
+2. Volte para essa versão com:
+   git checkout v1.0-stable
+
+   OU se não funcionar:
+   git checkout f153456b91ba19efb8fb29d4a0ec4375aec2cb46
+
+3. Pronto! Todos os arquivos voltam para como estavam.
+
+═══════════════════════════════════════════════════════════════════════════════
+OPÇÃO 2: CONTATAR CLAUDE (via Claude.com)
+═══════════════════════════════════════════════════════════════════════════════
+
+Se o git não funcionar ou você tiver dúvidas:
+
+1. Acesse: https://claude.com
+2. Inicie uma nova conversa (ou continue existente)
+3. Diga exatamente ISSO:
+
+   "Preciso recuperar a versão v1.0-stable do meu dashboard do Amazonas.
+    Commit hash: f153456b91ba19efb8fb29d4a0ec4375aec2cb46
+    Repositório: https://github.com/vfcolares-lab/dashboard-2026.git
+
+    Como eu faço para voltar para essa versão?"
+
+4. Claude vai:
+   - Entender imediatamente qual é a versão que você quer
+   - Dar os comandos exatos
+   - Ajudar se algo der errado
+
+═══════════════════════════════════════════════════════════════════════════════
+OPÇÃO 3: COMPARTILHE ESSES ARQUIVOS COMIGO
+═══════════════════════════════════════════════════════════════════════════════
+
+Se você compartilhar esses 2 arquivos comigo:
+
+  📄 VERSION.json
+  📄 VERSAO_ATUAL.md
+
+Eu vou entender EXATAMENTE qual é a versão que você quer recuperar,
+e vou poder ajudar rapidinho.
+
+═══════════════════════════════════════════════════════════════════════════════
+RESUMO DESSA VERSÃO
+═══════════════════════════════════════════════════════════════════════════════
+
+✅ 4.468 seções eleitorais mapeadas
+✅ 5 categorias (LULA+EB, DIFÍCIL, PURO_SWING, BOLSO+EB, EB_PURO)
+✅ Mapa funcionando com todos os pontos
+✅ Dados de 2022 com projeções 2026
+✅ Online no Vercel
+
+Identificador único: f153456b91ba19efb8fb29d4a0ec4375aec2cb46
+Tag: v1.0-stable
+
+═══════════════════════════════════════════════════════════════════════════════
+DÚVIDAS?
+═══════════════════════════════════════════════════════════════════════════════
+
+Claude está pronto para ajudar! Você pode:
+
+1. Abrir uma conversa nova
+2. Compartilhar esse arquivo (INSTRUÇÕES_FUTURA_RECUPERAÇÃO.txt)
+3. Compartilhar VERSION.json
+4. Contar o que está quebrado
+
+E Claude vai ajudar rapidinho! 🚀
+
+═══════════════════════════════════════════════════════════════════════════════
+Data: 27 de abril de 2026
+Criado por: Claude
+═══════════════════════════════════════════════════════════════════════════════
