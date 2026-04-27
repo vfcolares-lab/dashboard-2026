@@ -1,0 +1,29 @@
+{
+  "version": "v1.0-stable",
+  "release_date": "2026-04-27T15:27:21.709195",
+  "commit_hash": "f153456b91ba19efb8fb29d4a0ec4375aec2cb46",
+  "commit_short": "f153456",
+  "commit_date": "2026-04-27 15:17:41 -0400",
+  "repository": "https://github.com/vfcolares-lab/dashboard-2026.git",
+  "data": {
+    "total_sections": 4468,
+    "municipalities": 62,
+    "categories": {
+      "LULA+EB": 2312,
+      "DIFÍCIL": 1239,
+      "PURO_SWING": 532,
+      "EB_PURO": 124,
+      "BOLSO+EB": 261
+    }
+  },
+  "features": [
+    "Dashboard eleitoral Amazonas 2026",
+    "4.468 seções eleitorais mapeadas",
+    "5 categorias de classificação (LULA+EB, DIFÍCIL, PURO_SWING, BOLSO+EB, EB_PURO)",
+    "Mapa interativo com Leaflet",
+    "Coordenadas geográficas com offset aleatório",
+    "Índices de desempenho (nacional e Eduardo Braga)",
+    "Volatilidade eleitoral calculada",
+    "Projeções para 2026"
+  ]
+}
